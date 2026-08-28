@@ -1,0 +1,28 @@
+*.iml
+.gradle
+/local.properties
+/.idea
+/.vscode
+.DS_Store
+/build
+/captures
+.externalNativeBuild
+.cxx
+local.properties
+
+# Legacy native-util source locations
+/app/src/thirdparty
+/app/src/main/rust
+
+# Stale daemon binaries
+/app/src/main/assets/bin/*/bridgedhcp
+/app/src/main/assets/bin/*/gvswitch
+/app/src/main/assets/bin/*/lbx
+/app/src/main/assets/bin/*/netbox
+/app/src/main/assets/bin/*/pbridge
+
+# Terminal font
+/app/src/main/assets/fonts/*.ttf
+# Signing
+/signing.properties
+/keystore/
