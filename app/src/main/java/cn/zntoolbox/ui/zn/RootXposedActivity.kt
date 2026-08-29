@@ -1,7 +1,6 @@
 package cn.zntoolbox.ui.zn
 import android.content.Intent
 import android.os.Bundle
-import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -55,7 +54,12 @@ class RootXposedActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
-            RootXposedScreen(onBack = { finish() }, onOpenSettings = { startActivity(Intent(this, SettingsActivity::class.java)) })
+            RootXposedScreen(
+                onBack = { finish() },
+                onOpenSettings = {
+                    startActivity(Intent(this, SettingsActivity::class.java))
+                },
+            )
         }
     }
 }
@@ -66,36 +70,111 @@ private fun RootXposedScreen(onBack: () -> Unit, onOpenSettings: () -> Unit) {
     Box(Modifier.fillMaxSize()) {
         LiquidGlassBackground(backdrop)
         Column(
-            Modifier.fillMaxSize().verticalScroll(rememberScrollState()).statusBarsPadding().navigationBarsPadding().padding(horizontal = 20.dp, vertical = 16.dp),
+            Modifier
+                .fillMaxSize()
+                .verticalScroll(rememberScrollState())
+                .statusBarsPadding()
+                .navigationBarsPadding()
+                .padding(horizontal = 20.dp, vertical = 16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            GlassTopBar(backdrop, "Root & Xposed", onBack)
-            FeatureCard(backdrop = backdrop, icon = Icons.Rounded.Lock, tint = ZNColors.Bottom, title = "宿主免 Root", subtitle = "本应用以容器方式运行，宿主设备无需获取 Root 权限。")
-            FeatureCard(backdrop = backdrop, icon = Icons.Rounded.Verified, tint = ZNColors.Amber, title = "容器内自带 Root", subtitle = "虚拟 Android 系统内默认拥有完整 Root 权限，无需额外刷机。")
-            FeatureCard(backdrop = backdrop, icon = Icons.Rounded.Security, tint = ZNColors.Top, title = "内置 LSPosed (Xposed)", subtitle = "容器内预置 LSPosed 框架，Xposed 模块开箱即用。")
+            GlassTopBar(backdrop, "Root & Xposed 管理", onBack)
+            FeatureCard(
+                backdrop = backdrop,
+                icon = Icons.Rounded.Lock,
+                tint = ZNColors.Bottom,
+                title = "宿主免 Root",
+                subtitle = "本应用以容器方式运行，宿主设备无需获取 Root 权限。",
+            )
+            FeatureCard(
+                backdrop = backdrop,
+                icon = Icons.Rounded.Verified,
+                tint = ZNColors.Amber,
+                title = "容器内自带 Root",
+                subtitle = "虚拟 Android 系统内默认拥有完整 Root 权限，无需额外刷机。",
+            )
+            FeatureCard(
+                backdrop = backdrop,
+                icon = Icons.Rounded.Security,
+                tint = ZNColors.Top,
+                title = "内置 LSPosed (Xposed)",
+                subtitle = "容器内预置 LSPosed 框架，Xposed 模块开箱即用。",
+            )
             Spacer(Modifier.height(4.dp))
-            GlassButton(backdrop = backdrop, icon = Icons.Rounded.Android, label = "打开容器设置", tint = ZNColors.Mid, onClick = onOpenSettings)
+            GlassButton(
+                backdrop = backdrop,
+                icon = Icons.Rounded.Android,
+                label = "打开容器设置",
+                tint = ZNColors.Mid,
+                onClick = onOpenSettings,
+            )
             Spacer(Modifier.height(4.dp))
-            Text("提示：启动 Android 虚拟系统后，在系统内即可使用 Root 与 LSPosed 模块。", Modifier.fillMaxWidth(), color = Color.White.copy(alpha = 0.82f), fontSize = 13.sp, lineHeight = 19.sp)
+            Text(
+                "提示：启动 Android 虚拟系统后，在系统内即可使用 Root 与 LSPosed 模块。",
+                Modifier.fillMaxWidth(),
+                color = Color.White.copy(alpha = 0.82f),
+                fontSize = 13.sp,
+                lineHeight = 19.sp,
+            )
         }
     }
 }
 
 @Composable
-private fun FeatureCard(backdrop: Backdrop, icon: ImageVector, tint: Color, title: String, subtitle: String) {
+private fun FeatureCard(
+    backdrop: Backdrop,
+    icon: ImageVector,
+    tint: Color,
+    title: String,
+    subtitle: String,
+) {
     val cardShape = remember { com.kyant.shapes.RoundedRectangle(26.dp) }
     Row(
-        Modifier.fillMaxWidth().drawBackdrop(backdrop = backdrop, shape = { cardShape }, effects = { vibrancy(); blur(22f.dp.toPx()) }, layerBlock = { clip = true; shape = com.kyant.shapes.RoundedRectangle(26.dp) }).padding(18.dp),
+        Modifier
+            .fillMaxWidth()
+            .drawBackdrop(
+                backdrop = backdrop,
+                shape = { cardShape },
+                effects = {
+                    vibrancy()
+                    blur(22f.dp.toPx())
+                },
+                layerBlock = {
+                    clip = true
+                    shape = com.kyant.shapes.RoundedRectangle(26.dp)
+                },
+            )
+            .padding(18.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(14.dp),
     ) {
-        Box(Modifier.size(46.dp).drawBackdrop(backdrop = backdrop, shape = { CircleShape }, effects = { vibrancy(); blur(12f.dp.toPx()) }).background(tint.copy(alpha = 0.35f), CircleShape), contentAlignment = Alignment.Center) {
+        Box(
+            Modifier
+                .size(46.dp)
+                .drawBackdrop(
+                    backdrop = backdrop,
+                    shape = { CircleShape },
+                    effects = { vibrancy(); blur(12f.dp.toPx()) },
+                )
+                .background(tint.copy(alpha = 0.35f), CircleShape),
+            contentAlignment = Alignment.Center,
+        ) {
             Icon(icon, null, tint = Color.White, modifier = Modifier.size(24.dp))
         }
         Column(Modifier.weight(1f)) {
-            Text(title, color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
+            Text(
+                title,
+                color = Color.White,
+                fontSize = 16.sp,
+                fontWeight = FontWeight.SemiBold,
+            )
             Spacer(Modifier.height(2.dp))
-            Text(subtitle, color = Color.White.copy(alpha = 0.82f), fontSize = 12.5.sp, lineHeight = 18.sp)
+            Text(
+                subtitle,
+                color = Color.White.copy(alpha = 0.82f),
+                fontSize = 12.5.sp,
+                lineHeight = 18.sp,
+            )
         }
     }
 }
