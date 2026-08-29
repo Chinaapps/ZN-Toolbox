@@ -67,6 +67,7 @@ class ZNToolboxHomeActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
+            val onLaunch = { startActivity(Intent(this, ZNLaunchActivity::class.java)) }
             val onOpenProfiles = { startActivity(Intent(this, ProfileListActivity::class.java)) }
             val onOpenSettings = { startActivity(Intent(this, SettingsActivity::class.java)) }
             val onOpenRootXposed = { startActivity(Intent(this, RootXposedActivity::class.java)) }
@@ -79,13 +80,14 @@ class ZNToolboxHomeActivity : ComponentActivity() {
                 try { startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url))) }
                 catch (_: ActivityNotFoundException) { Toast.makeText(this, "未找到浏览器", Toast.LENGTH_SHORT).show() }
             }
-            ZNToolboxHomeScreen(onOpenProfiles, onOpenSettings, onOpenRootXposed, onOpenAbout, onOpenGithub, onOpenUrl)
+            ZNToolboxHomeScreen(onLaunch, onOpenProfiles, onOpenSettings, onOpenRootXposed, onOpenAbout, onOpenGithub, onOpenUrl)
         }
     }
 }
 
 @Composable
 fun ZNToolboxHomeScreen(
+    onLaunch: () -> Unit,
     onOpenProfiles: () -> Unit,
     onOpenSettings: () -> Unit,
     onOpenRootXposed: () -> Unit,
@@ -97,9 +99,7 @@ fun ZNToolboxHomeScreen(
     Box(Modifier.fillMaxSize()) {
         LiquidGlassBackground(backdrop)
         Column(
-            Modifier
-                .fillMaxSize()
-                .verticalScroll(rememberScrollState())
+            Modifier.fillMaxSize().verticalScroll(rememberScrollState())
                 .statusBarsPadding()
                 .padding(horizontal = 20.dp, vertical = 24.dp)
                 .padding(bottom = 110.dp),
@@ -131,7 +131,7 @@ fun ZNToolboxHomeScreen(
                 textAlign = androidx.compose.ui.text.style.TextAlign.Center)
         }
         Box(Modifier.align(Alignment.BottomCenter).fillMaxWidth()) {
-            LiquidGlassBottomBar(backdrop = backdrop, onLaunch = onOpenProfiles)
+            LiquidGlassBottomBar(backdrop = backdrop, onLaunch = onLaunch)
         }
     }
 }
@@ -139,53 +139,29 @@ fun ZNToolboxHomeScreen(
 @Composable
 private fun LiquidGlassBottomBar(backdrop: Backdrop, onLaunch: () -> Unit) {
     Box(
-        Modifier
-            .fillMaxWidth()
-            .navigationBarsPadding()
-            .padding(horizontal = 20.dp, vertical = 16.dp)
+        Modifier.fillMaxWidth().navigationBarsPadding().padding(horizontal = 20.dp, vertical = 16.dp)
     ) {
         Box(
-            Modifier
-                .fillMaxWidth()
-                .drawBackdrop(
-                    backdrop = backdrop,
-                    shape = { Capsule() },
+            Modifier.fillMaxWidth()
+                .drawBackdrop(backdrop = backdrop, shape = { Capsule() },
                     effects = { vibrancy(); blur(28f.dp.toPx()) },
-                    layerBlock = {
-                        clip = true
-                        shape = Capsule()
-                    },
-                )
+                    layerBlock = { clip = true; shape = Capsule() })
                 .padding(horizontal = 8.dp, vertical = 8.dp),
         ) {
-            Row(
-                Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-            ) {
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 Box(
-                    Modifier
-                        .size(44.dp)
-                        .drawBackdrop(
-                            backdrop = backdrop,
-                            shape = { CircleShape },
-                            effects = { vibrancy(); blur(12f.dp.toPx()) },
-                        )
+                    Modifier.size(44.dp)
+                        .drawBackdrop(backdrop = backdrop, shape = { CircleShape }, effects = { vibrancy(); blur(12f.dp.toPx()) })
                         .background(ZNColors.Bottom.copy(alpha = 0.4f), CircleShape),
                     contentAlignment = Alignment.Center,
-                ) {
-                    Icon(Icons.Rounded.Android, null, tint = Color.White, modifier = Modifier.size(24.dp))
-                }
+                ) { Icon(Icons.Rounded.Android, null, tint = Color.White, modifier = Modifier.size(24.dp)) }
                 Column(Modifier.weight(1f)) {
                     Text("Android 容器", color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
                     Text("容器内自带 Root & Xposed", color = Color.White.copy(alpha = 0.75f), fontSize = 11.sp)
                 }
                 Box(
-                    Modifier
-                        .background(
-                            Brush.horizontalGradient(listOf(ZNColors.Bottom, ZNColors.Mid, ZNColors.Accent)),
-                            Capsule()
-                        )
+                    Modifier.background(Brush.horizontalGradient(listOf(ZNColors.Bottom, ZNColors.Mid, ZNColors.Accent)), Capsule())
                         .clickable(onClick = onLaunch)
                         .padding(horizontal = 28.dp, vertical = 14.dp),
                     contentAlignment = Alignment.Center,
@@ -202,16 +178,11 @@ private fun LiquidGlassBottomBar(backdrop: Backdrop, onLaunch: () -> Unit) {
 
 @Composable
 private fun Header(backdrop: Backdrop) {
-    Row(
-        Modifier.fillMaxWidth().padding(top = 12.dp, bottom = 8.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(16.dp),
-    ) {
+    Row(Modifier.fillMaxWidth().padding(top = 12.dp, bottom = 8.dp),
+        verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(16.dp)) {
         Box(
-            Modifier.size(72.dp).drawBackdrop(
-                backdrop = backdrop, shape = { CircleShape },
-                effects = { vibrancy(); blur(16f.dp.toPx()) },
-            ),
+            Modifier.size(72.dp)
+                .drawBackdrop(backdrop = backdrop, shape = { CircleShape }, effects = { vibrancy(); blur(16f.dp.toPx()) }),
             contentAlignment = Alignment.Center,
         ) {
             Image(painterResource(R.drawable.zn_logo), contentDescription = "ℤ𝕟𝕏工具 图标",
@@ -231,22 +202,19 @@ private fun ToolCard(
 ) {
     val cardShape = remember { com.kyant.shapes.RoundedRectangle(28.dp) }
     Row(
-        modifier.fillMaxWidth().drawBackdrop(
-            backdrop = backdrop, shape = { cardShape },
-            effects = { vibrancy(); blur(24f.dp.toPx()); lens(refractionHeight = 60f.dp.toPx(), refractionAmount = 1.5f) },
-            layerBlock = { clip = true; shape = com.kyant.shapes.RoundedRectangle(28.dp) },
-        ).clickable(onClick = onClick).padding(18.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(14.dp),
+        modifier.fillMaxWidth()
+            .drawBackdrop(backdrop = backdrop, shape = { cardShape },
+                effects = { vibrancy(); blur(24f.dp.toPx()); lens(refractionHeight = 60f.dp.toPx(), refractionAmount = 1.5f) },
+                layerBlock = { clip = true; shape = com.kyant.shapes.RoundedRectangle(28.dp) })
+            .clickable(onClick = onClick).padding(18.dp),
+        verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp),
     ) {
         Box(
-            Modifier.size(48.dp).drawBackdrop(
-                backdrop = backdrop, shape = { CircleShape }, effects = { vibrancy(); blur(12f.dp.toPx()) },
-            ).background(tint.copy(alpha = 0.35f), CircleShape),
+            Modifier.size(48.dp)
+                .drawBackdrop(backdrop = backdrop, shape = { CircleShape }, effects = { vibrancy(); blur(12f.dp.toPx()) })
+                .background(tint.copy(alpha = 0.35f), CircleShape),
             contentAlignment = Alignment.Center,
-        ) {
-            Icon(icon, null, tint = Color.White, modifier = Modifier.size(26.dp))
-        }
+        ) { Icon(icon, null, tint = Color.White, modifier = Modifier.size(26.dp)) }
         Column(Modifier.weight(1f)) {
             Text(title, color = Color.White, fontSize = 17.sp, fontWeight = FontWeight.SemiBold)
             Text(subtitle, color = Color.White.copy(alpha = 0.82f), fontSize = 12.sp, lineHeight = 17.sp)
