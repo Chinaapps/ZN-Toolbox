@@ -15,12 +15,10 @@ android {
         applicationId "cn.zntoolbox"
         minSdk 27
         targetSdk 27
-        versionCode 10000
-        versionName "1.0.0-Beta"
+        versionCode 20401
+        versionName "2.4.1-debug"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
-        ndk {
-            abiFilters "arm64-v8a"
-        }
+        ndk { abiFilters "arm64-v8a" }
         buildConfigField "String", "GITHUB_URL", "\"https://github.com/Chinaapps/ZN-Toolbox\""
         buildConfigField "String", "GITHUB_API_REPO", "\"Chinaapps/ZN-Toolbox\""
         buildConfigField "String", "KS_FRIEND_URL", "\"https://v.kuaishou.com/nRerA0by\""
@@ -28,10 +26,7 @@ android {
         buildConfigField "String", "BASE_PROJECT_URL", "\"https://github.com/twoyi/twoyi\""
         buildConfigField "String", "FORK_PROJECT_URL", "\"https://github.com/watchings/twoyi.\""
     }
-    buildFeatures {
-        buildConfig true
-        compose true
-    }
+    buildFeatures { buildConfig true; compose true }
     buildTypes {
         release {
             minifyEnabled false
@@ -44,11 +39,7 @@ android {
         targetCompatibility JavaVersion.VERSION_17
     }
 }
-task cargoBuild {
-    doLast {
-        println "libtwoyi.so already prebuilt, skipping Rust build"
-    }
-}
+task cargoBuild { doLast { println "libtwoyi.so already prebuilt, skipping Rust build" } }
 tasks.whenTaskAdded { task ->
     if ((task.name == 'javaPreCompileDebug' || task.name == 'javaPreCompileRelease')) {
         task.dependsOn "cargoBuild"
