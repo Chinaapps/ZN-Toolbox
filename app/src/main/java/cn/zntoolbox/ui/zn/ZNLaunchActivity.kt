@@ -67,106 +67,77 @@ import java.io.File
 
 class ZNLaunchActivity : ComponentActivity() {
     private var isBooting by mutableStateOf(false)
-
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
-            val profileManager = ProfileManager.getInstance(this)
-            val activeProfile = profileManager.activeProfile
-            val profileName = activeProfile?.name ?: "默认配置"
-            val profileMode = when {
-                activeProfile?.isLegacyMode == true -> "兼容模式 (OpenGL)"
-                activeProfile?.isServerMode == true -> "服务器模式 (Scrcpy)"
+            val pm = ProfileManager.getInstance(this)
+            val active = pm.activeProfile
+            val name = active?.name ?: "默认配置"
+            val mode = when {
+                active?.isLegacyMode == true -> "兼容模式 (OpenGL)"
+                active?.isServerMode == true -> "服务器模式 (Scrcpy)"
                 else -> "兼容模式 (OpenGL)"
             }
-            ZNLaunchScreen(
-                profileName = profileName,
-                profileMode = profileMode,
-                isBooting = isBooting,
+            ZNLaunchScreen(name, mode, isBooting,
                 onBack = { finish() },
                 onLaunch = { bootContainer() },
                 onManageProfiles = { startActivity(Intent(this, ProfileListActivity::class.java)) },
-                onSettings = { startActivity(Intent(this, SettingsActivity::class.java)) },
-            )
+                onSettings = { startActivity(Intent(this, SettingsActivity::class.java)) })
         }
     }
-
     private fun bootContainer() {
         if (isBooting) return
         isBooting = true
-        val profileManager = ProfileManager.getInstance(this)
-        val activeProfile = profileManager.activeProfile
-        activeProfile?.updateLastUsed()
-        profileManager.updateProfile(activeProfile)
-        val rootfsDir = activeProfile?.let { profileManager.getRootfsDir(it) }
-            ?: RomManager.getRootfsDir(this)
-        val useLegacy = activeProfile?.isLegacyMode != false
-        if (useLegacy) { bootLegacy(rootfsDir, activeProfile) } else { bootServer(rootfsDir, activeProfile) }
+        val pm = ProfileManager.getInstance(this)
+        val active = pm.activeProfile
+        active?.updateLastUsed()
+        pm.updateProfile(active)
+        val rootfsDir = active?.let { pm.getRootfsDir(it) } ?: RomManager.getRootfsDir(this)
+        if (active?.isLegacyMode != false) bootLegacy(rootfsDir, active) else bootServer(rootfsDir, active)
     }
-
     private fun bootLegacy(rootfsDir: File, profile: Profile?) {
-        val romExist = RomManager.romExist(rootfsDir)
-        if (!romExist) {
-            val dialog = ProgressDialog(this).apply {
-                setMessage(getString(R.string.extracting_tips))
-                setCancelable(false)
-                show()
-            }
+        if (!RomManager.romExist(rootfsDir)) {
+            val dialog = ProgressDialog(this).apply { setMessage(getString(R.string.extracting_tips)); setCancelable(false); show() }
             Thread {
                 try {
                     val factoryRomUpdated = RomManager.needsUpgrade(this, rootfsDir)
                     val forceInstall = AppKV.getBooleanConfig(this, AppKV.FORCE_ROM_BE_RE_INSTALL, false)
-                    val use3rdRom = profile?.isUse3rdPartyRom
-                        ?: AppKV.getBooleanConfig(this, AppKV.SHOULD_USE_THIRD_PARTY_ROM, false)
+                    val use3rdRom = profile?.isUse3rdPartyRom ?: AppKV.getBooleanConfig(this, AppKV.SHOULD_USE_THIRD_PARTY_ROM, false)
                     RomManager.extractRootfs(applicationContext, rootfsDir, false, factoryRomUpdated, forceInstall, use3rdRom, true)
                     RomManager.initRootfs(applicationContext, rootfsDir)
                     runOnUiThread {
                         dialog.dismiss()
-                        if (RomManager.romExist(rootfsDir)) { startLegacyRenderer() }
+                        if (RomManager.romExist(rootfsDir)) startLegacyRenderer()
                         else { Toast.makeText(this, "根文件系统解压失败", Toast.LENGTH_LONG).show(); isBooting = false }
                     }
                 } catch (e: Exception) {
-                    runOnUiThread {
-                        dialog.dismiss()
-                        Toast.makeText(this, "启动失败: ${e.message}", Toast.LENGTH_LONG).show()
-                        isBooting = false
-                    }
+                    runOnUiThread { dialog.dismiss(); Toast.makeText(this, "启动失败: ${e.message}", Toast.LENGTH_LONG).show(); isBooting = false }
                 }
             }.start()
-        } else { startLegacyRenderer() }
+        } else startLegacyRenderer()
     }
-
     private fun startLegacyRenderer() {
-        val intent = Intent(this, Render2Activity::class.java)
-        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)
-        startActivity(intent)
+        startActivity(Intent(this, Render2Activity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK))
         finish()
     }
-
     private fun bootServer(rootfsDir: File, profile: Profile?) {
         val address = profile?.serverAddress ?: AppKV.DEFAULT_SERVER_ADDRESS
-        val dialog = ProgressDialog(this).apply {
-            setMessage(getString(R.string.server_connecting))
-            setCancelable(false)
-            show()
-        }
+        val dialog = ProgressDialog(this).apply { setMessage(getString(R.string.server_connecting)); setCancelable(false); show() }
         Thread {
             try {
-                val romExist = RomManager.romExist(rootfsDir)
-                if (!romExist) {
+                if (!RomManager.romExist(rootfsDir)) {
                     runOnUiThread { dialog.setMessage(getString(R.string.extracting_tips)) }
                     val factoryRomUpdated = RomManager.needsUpgrade(this, rootfsDir)
                     val forceInstall = AppKV.getBooleanConfig(this, AppKV.FORCE_ROM_BE_RE_INSTALL, false)
-                    val use3rdRom = profile?.isUse3rdPartyRom
-                        ?: AppKV.getBooleanConfig(this, AppKV.SHOULD_USE_THIRD_PARTY_ROM, false)
-                    RomManager.extractRootfs(applicationContext, rootfsDir, romExist, factoryRomUpdated, forceInstall, use3rdRom)
+                    val use3rdRom = profile?.isUse3rdPartyRom ?: AppKV.getBooleanConfig(this, AppKV.SHOULD_USE_THIRD_PARTY_ROM, false)
+                    RomManager.extractRootfs(applicationContext, rootfsDir, false, factoryRomUpdated, forceInstall, use3rdRom)
                     RomManager.initRootfs(applicationContext, rootfsDir)
-                    if (!RomManager.romExist(rootfsDir)) { throw Exception("根文件系统解压失败") }
+                    if (!RomManager.romExist(rootfsDir)) throw Exception("根文件系统解压失败")
                     runOnUiThread { dialog.setMessage(getString(R.string.server_connecting)) }
                 }
                 RomManager.ensureBootFiles(applicationContext, rootfsDir)
-                val metrics: DisplayMetrics = resources.displayMetrics
+                val metrics = resources.displayMetrics
                 ServerManager.startServer(this, address, metrics.widthPixels, metrics.heightPixels)
                 var ready = false
                 for (i in 0..9) { Thread.sleep(500); if (ServerManager.testConnection(address)) { ready = true; break } }
@@ -174,36 +145,24 @@ class ZNLaunchActivity : ComponentActivity() {
                 runOnUiThread {
                     dialog.dismiss()
                     Toast.makeText(this, R.string.server_started, Toast.LENGTH_SHORT).show()
-                    val intent = Intent(this, RemoteRenderActivity::class.java)
-                    intent.putExtra("server_address", address)
-                    startActivity(intent)
+                    startActivity(Intent(this, RemoteRenderActivity::class.java).putExtra("server_address", address))
                     isBooting = false
                 }
             } catch (e: Exception) {
-                runOnUiThread {
-                    dialog.dismiss()
-                    Toast.makeText(this, "启动失败: ${e.message}", Toast.LENGTH_LONG).show()
-                    isBooting = false
-                }
+                runOnUiThread { dialog.dismiss(); Toast.makeText(this, "启动失败: ${e.message}", Toast.LENGTH_LONG).show(); isBooting = false }
             }
         }.start()
     }
 }
 
 @Composable
-private fun ZNLaunchScreen(
-    profileName: String, profileMode: String, isBooting: Boolean,
-    onBack: () -> Unit, onLaunch: () -> Unit, onManageProfiles: () -> Unit, onSettings: () -> Unit,
-) {
+private fun ZNLaunchScreen(profileName: String, profileMode: String, isBooting: Boolean,
+    onBack: () -> Unit, onLaunch: () -> Unit, onManageProfiles: () -> Unit, onSettings: () -> Unit) {
     val backdrop = rememberLayerBackdrop()
     Box(Modifier.fillMaxSize()) {
         LiquidGlassBackground(backdrop)
-        Column(
-            Modifier.fillMaxSize().verticalScroll(rememberScrollState())
-                .statusBarsPadding().navigationBarsPadding()
-                .padding(horizontal = 20.dp, vertical = 16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
-        ) {
+        Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).statusBarsPadding().navigationBarsPadding()
+            .padding(horizontal = 20.dp, vertical = 16.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
             GlassTopBar(backdrop, "启动容器", onBack)
             ProfileInfoCard(backdrop, profileName, profileMode)
             Spacer(Modifier.height(8.dp))
@@ -211,21 +170,18 @@ private fun ZNLaunchScreen(
                 Brush.horizontalGradient(listOf(Color.Gray.copy(alpha = 0.4f), Color.DarkGray.copy(alpha = 0.3f)))
             else
                 Brush.horizontalGradient(listOf(ZNColors.Bottom.copy(alpha = 0.55f), ZNColors.Mid.copy(alpha = 0.55f), ZNColors.Accent.copy(alpha = 0.55f)))
-            Box(
-                Modifier.fillMaxWidth()
+            GlowBox(glowColor = ZNColors.Accent, modifier = Modifier.fillMaxWidth()) {
+                Box(Modifier.fillMaxWidth()
                     .drawBackdrop(backdrop = backdrop, shape = { Capsule() },
                         effects = { vibrancy(); blur(28f.dp.toPx()); lens(refractionHeight = 50f.dp.toPx(), refractionAmount = 2f) },
                         layerBlock = { clip = true; shape = Capsule() })
                     .background(launchTint, Capsule())
-                    .clickable(enabled = !isBooting, onClick = onLaunch)
-                    .padding(vertical = 22.dp),
-                contentAlignment = Alignment.Center,
-            ) {
-                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    Icon(if (isBooting) Icons.Rounded.Info else Icons.Rounded.PlayArrow, null,
-                        tint = Color.White, modifier = Modifier.size(28.dp))
-                    Text(if (isBooting) "正在启动…" else "启动 Android 容器",
-                        color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Bold)
+                    .clickable(enabled = !isBooting, onClick = onLaunch).padding(vertical = 22.dp),
+                    contentAlignment = Alignment.Center) {
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                        Icon(if (isBooting) Icons.Rounded.Info else Icons.Rounded.PlayArrow, null, tint = Color.White, modifier = Modifier.size(28.dp))
+                        Text(if (isBooting) "正在启动…" else "启动 Android 容器", color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Bold)
+                    }
                 }
             }
             Spacer(Modifier.height(4.dp))
@@ -243,20 +199,16 @@ private fun ZNLaunchScreen(
 @Composable
 private fun ProfileInfoCard(backdrop: Backdrop, name: String, mode: String) {
     val cardShape = remember { com.kyant.shapes.RoundedRectangle(28.dp) }
-    Row(
-        Modifier.fillMaxWidth()
-            .drawBackdrop(backdrop = backdrop, shape = { cardShape },
-                effects = { vibrancy(); blur(24f.dp.toPx()); lens(refractionHeight = 60f.dp.toPx(), refractionAmount = 1.5f) },
-                layerBlock = { clip = true; shape = com.kyant.shapes.RoundedRectangle(28.dp) })
-            .padding(20.dp),
-        verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(16.dp),
-    ) {
-        Box(
-            Modifier.size(56.dp)
-                .drawBackdrop(backdrop = backdrop, shape = { CircleShape }, effects = { vibrancy(); blur(12f.dp.toPx()) })
-                .background(ZNColors.Bottom.copy(alpha = 0.4f), CircleShape),
-            contentAlignment = Alignment.Center,
-        ) { Icon(Icons.Rounded.Android, null, tint = Color.White, modifier = Modifier.size(30.dp)) }
+    Row(Modifier.fillMaxWidth()
+        .drawBackdrop(backdrop = backdrop, shape = { cardShape },
+            effects = { vibrancy(); blur(24f.dp.toPx()); lens(refractionHeight = 60f.dp.toPx(), refractionAmount = 1.5f) },
+            layerBlock = { clip = true; shape = com.kyant.shapes.RoundedRectangle(28.dp) }).padding(20.dp),
+        verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+        Box(Modifier.size(56.dp)
+            .drawBackdrop(backdrop = backdrop, shape = { CircleShape }, effects = { vibrancy(); blur(12f.dp.toPx()) })
+            .background(ZNColors.Bottom.copy(alpha = 0.4f), CircleShape), contentAlignment = Alignment.Center) {
+            Icon(Icons.Rounded.Android, null, tint = Color.White, modifier = Modifier.size(30.dp))
+        }
         Column(Modifier.weight(1f)) {
             Text("当前配置", color = Color.White.copy(alpha = 0.7f), fontSize = 12.sp)
             Text(name, color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Bold)
@@ -266,25 +218,19 @@ private fun ProfileInfoCard(backdrop: Backdrop, name: String, mode: String) {
 }
 
 @Composable
-private fun QuickActionCard(
-    backdrop: Backdrop, icon: ImageVector, label: String, tint: Color,
-    modifier: Modifier = Modifier, onClick: () -> Unit,
-) {
+private fun QuickActionCard(backdrop: Backdrop, icon: ImageVector, label: String, tint: Color,
+    modifier: Modifier = Modifier, onClick: () -> Unit) {
     val cardShape = remember { com.kyant.shapes.RoundedRectangle(20.dp) }
-    Column(
-        modifier
-            .drawBackdrop(backdrop = backdrop, shape = { cardShape }, effects = { vibrancy(); blur(20f.dp.toPx()) },
-                layerBlock = { clip = true; shape = com.kyant.shapes.RoundedRectangle(20.dp) })
-            .clickable(onClick = onClick)
-            .padding(vertical = 18.dp, horizontal = 14.dp),
-        horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp),
-    ) {
-        Box(
-            Modifier.size(40.dp)
-                .drawBackdrop(backdrop = backdrop, shape = { CircleShape }, effects = { vibrancy(); blur(10f.dp.toPx()) })
-                .background(tint.copy(alpha = 0.35f), CircleShape),
-            contentAlignment = Alignment.Center,
-        ) { Icon(icon, null, tint = Color.White, modifier = Modifier.size(22.dp)) }
+    Column(modifier
+        .drawBackdrop(backdrop = backdrop, shape = { cardShape }, effects = { vibrancy(); blur(20f.dp.toPx()) },
+            layerBlock = { clip = true; shape = com.kyant.shapes.RoundedRectangle(20.dp) })
+        .clickable(onClick = onClick).padding(vertical = 18.dp, horizontal = 14.dp),
+        horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Box(Modifier.size(40.dp)
+            .drawBackdrop(backdrop = backdrop, shape = { CircleShape }, effects = { vibrancy(); blur(10f.dp.toPx()) })
+            .background(tint.copy(alpha = 0.35f), CircleShape), contentAlignment = Alignment.Center) {
+            Icon(icon, null, tint = Color.White, modifier = Modifier.size(22.dp))
+        }
         Text(label, color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
     }
 }
